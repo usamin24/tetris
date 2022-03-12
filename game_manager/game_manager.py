@@ -15,6 +15,8 @@ import time
 import json
 import pprint
 
+import os
+
 def get_option(game_time, mode, drop_interval, random_seed, obstacle_height, obstacle_probability, resultlogjson, user_name):
     argparser = ArgumentParser()
     argparser.add_argument('--game_time', type=int,

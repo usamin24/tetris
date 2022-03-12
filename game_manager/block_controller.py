@@ -6,6 +6,8 @@ import pprint
 import random
 import copy
 
+import os
+
 class Block_Controller(object):
 
     # init parameter
@@ -63,22 +65,22 @@ class Block_Controller(object):
                 # get board data, as if dropdown block
                 board = self.getBoard(self.board_backboard, self.CurrentShape_class, direction0, x0)
 
-                # evaluate board
-                EvalValue = self.calcEvaluationValueUSAMI(board)
-                # update best move
-                if EvalValue > LatestEvalValue:
-                    strategy = (direction0, x0, 1, 1)
-                    LatestEvalValue = EvalValue
+                ## evaluate board
+                #EvalValue = self.calcEvaluationValueUSAMI(board)
+                ## update best move
+                #if EvalValue > LatestEvalValue:
+                #    strategy = (direction0, x0, 1, 1)
+                #    LatestEvalValue = EvalValue
 
-                ###test
-                ###for direction1 in NextShapeDirectionRange:
-                ###  x1Min, x1Max = self.getSearchXRange(self.NextShape_class, direction1)
-                ###  for x1 in range(x1Min, x1Max):
-                ###        board2 = self.getBoard(board, self.NextShape_class, direction1, x1)
-                ###        EvalValue = self.calcEvaluationValueSample(board2)
-                ###        if EvalValue > LatestEvalValue:
-                ###            strategy = (direction0, x0, 1, 1)
-                ###            LatestEvalValue = EvalValue
+                #test
+                for direction1 in NextShapeDirectionRange:  
+                    x1Min, x1Max = self.getSearchXRange(self.NextShape_class, direction1)
+                    for x1 in range(x1Min, x1Max):
+                            board2 = self.getBoard(board, self.NextShape_class, direction1, x1)
+                            EvalValue = self.calcEvaluationValueUSAMI(board2)
+                            if EvalValue > LatestEvalValue:
+                                strategy = (direction0, x0, 1, 1)
+                                LatestEvalValue = EvalValue
         # search best nextMove <--
 
         print("===", datetime.now() - t1)
@@ -88,6 +90,7 @@ class Block_Controller(object):
         nextMove["strategy"]["y_moveblocknum"] = strategy[3]
         print(nextMove)
         print("###### USAMI CODE ######")
+        
         return nextMove
         
     def getSearchXRange(self, Shape_class, direction):
@@ -155,20 +158,37 @@ class Block_Controller(object):
         # evaluation paramters
         ## lines to be removed
         fullLines = 0
+        ## 複数列消しフラグ
+        hasMaxfullLines = False
+        has3fullLines = False
+        has2fullLines = False
+        ## リーチ状態のline数
+        reachlines = 0
+        ## Blockが横に8つ並んでいる(セミリーチ)line数
+        w8lines = 0
         ## number of holes or blocks in the line.
         nHoles, nIsolatedBlocks = 0, 0
+        # 上がふさがった穴の数
+        nDeadHoles = 0
         ## absolute differencial value of MaxY
         absDy = 0
         ## how blocks are accumlated
         BlockMaxY = [0] * width
         holeCandidates = [0] * width
         holeConfirm = [0] * width
+        ## 上がふさがっているDeadhole の候補と確定
+        deadholeCandidates = [0] * width
+        deadholeConfirm = [0] * width
+        #y列目ごとにあるブロックの数
+        nBlocks = [0] * height
 
         ### check board
         # each y line
         for y in range(height - 1, 0, -1):
             hasHole = False
             hasBlock = False
+            hasReach = False
+            hasDeadHole = False
             # each x line
             for x in range(width):
                 ## check if hole or block..
@@ -176,29 +196,71 @@ class Block_Controller(object):
                     # hole
                     hasHole = True
                     holeCandidates[x] += 1  # just candidates in each column..
+
+                    #holeの一段上(y-1)を見てBlockがある場合DeadHoleとして数える(塞がるのは評価マイナス)
+                    if board[(y - 1) * self.board_data_width + x] != self.ShapeNone_index:
+                        #DeadHole
+                        hasDeadHole = True
+                        deadholeCandidates[x] += 1
+
                 else:
                     # block
                     hasBlock = True
                     BlockMaxY[x] = height - y                # update blockMaxY
+                    nBlocks[y] += 1
+
                     if holeCandidates[x] > 0:
                         holeConfirm[x] += holeCandidates[x]  # update number of holes in target column..
                         holeCandidates[x] = 0                # reset
+                     
+                        if holeConfirm[x] == 1:              #リーチのline(holeが一つだけの線)があるかどうか調べる
+                            hasReach = True
+                        else:
+                            hasReach = False
+                    
                     if holeConfirm[x] > 0:
                         nIsolatedBlocks += 1                 # update number of isolated blocks
+
+                    if deadholeCandidates[x] > 0:
+                        deadholeConfirm[x] += deadholeCandidates[x]  # update number of holes in target column..
+                        deadholeCandidates[x] = 0                # reset
 
             if hasBlock == True and hasHole == False:
                 # filled with block
                 fullLines += 1
+                if fullLines == 4:
+                    hasMaxfullLines = True
+                elif fullLines == 3:
+                    has3fullLines = True
+                elif fullLines == 2:
+                    has2fullLines = True
+                else:
+                    hasMaxfullLines = False
+                    has3fullLines = False
+                    has2fullLines = False
             elif hasBlock == True and hasHole == True:
                 # do nothing
                 pass
             elif hasBlock == False:
                 # no block line (and ofcourse no hole)
                 pass
+            
+            #リーチの本数を追加する
+            if nBlocks[y] == width - 1 :
+                # filled with block
+                reachlines += 1
+
+            if nBlocks[y] == width - 2 :
+                # filled with block
+                w8lines += 1
 
         # nHoles
         for x in holeConfirm:
             nHoles += abs(x)
+
+        # nDeadHoles
+        for x in deadholeConfirm:
+            nDeadHoles += abs(x)
 
         ### absolute differencial value of MaxY
         BlockMaxDy = []
@@ -228,16 +290,30 @@ class Block_Controller(object):
 
         # calc Evaluation Value
         score = 0
-        score = score + fullLines* fullLines * 10.0           # try to delete line 
-        score = score - nHoles * 5.0               # try not to make hole
-        score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
+        score = score + reachlines * 10.0
+        score = score + w8lines * 5.0
+        if hasMaxfullLines == True:
+            score = score + fullLines *100.0
+        elif has3fullLines == True:
+            score = score + fullLines *50.0
+        elif has2fullLines == True:
+            score = score + fullLines *0.0
+        else :
+            score = score +fullLines *0.0
+            
+        #score = score + (fullLines/3) * 500.0 + (fullLines/4) +1000.0          # try to delete line 
+        score = score - nHoles * 10.0                     # try not to make hole
+        score = score - nDeadHoles * 10.0                     # try not to make hole
+        #score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
         score = score - absDy * 1.0                # try to put block smoothly
-        score = score - maxDy * 0.3                # maxDy
-        score = score - maxHeight * 0.5              # maxHeight
+        score = score - maxDy * 1.0                # maxDy
+        score = score - maxHeight * 1.0              # maxHeight
         #score = score - stdY * 1.0                 # statistical data
         #score = score - stdDY * 0.01               # statistical data
 
-        print(score, fullLines, nHoles, nIsolatedBlocks, maxHeight, absDy, BlockMaxY)
+        #print('score=', score ,'reach=', reachlines,'full=', fullLines, 'holes=', nHoles,'deadholes=', 
+        #       nDeadHoles, 'IsolatedBlocks=', nIsolatedBlocks, 'maxHeiaght=',maxHeight, 'absDy=',absDy,'BlockMaxY=', BlockMaxY)
+        #os.system('PAUSE')
         return score
 
 BLOCK_CONTROLLER = Block_Controller()
