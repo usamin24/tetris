@@ -168,21 +168,15 @@ class Block_Controller(object):
         w8lines = 0
         ## number of holes or blocks in the line.
         nHoles, nIsolatedBlocks = 0, 0
-<<<<<<< HEAD
         #浮いているブロックの数
         nFloatingBlocks = 0
 
-=======
-        # 上がふさがった穴の数
-        nDeadHoles = 0
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
         ## absolute differencial value of MaxY
         absDy = 0
         ## how blocks are accumlated
         BlockMaxY = [0] * width
         holeCandidates = [0] * width
         holeConfirm = [0] * width
-<<<<<<< HEAD
         ## 上がふさがっているFloatingBlock の候補と確定
         FloatingBlockCandidates = [0] * width
         FloatingBlockConfirm = [0] * width
@@ -190,26 +184,14 @@ class Block_Controller(object):
         nBlocksEachLine = [0] * height
         #y列目ごとにある浮いているブロックの数
         nFloatingBlocksEachLine = [0] * height
-=======
-        ## 上がふさがっているDeadhole の候補と確定
-        deadholeCandidates = [0] * width
-        deadholeConfirm = [0] * width
-        #y列目ごとにあるブロックの数
-        nBlocks = [0] * height
-
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
         ### check board
         # each y line
         for y in range(height - 1, 0, -1):
             hasHole = False
             hasBlock = False
             hasReach = False
-<<<<<<< HEAD
             hasFloatingBlock = False
             
-=======
-            hasDeadHole = False
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
             # each x line
             for x in range(width):
                 ## check if hole or block..
@@ -218,24 +200,11 @@ class Block_Controller(object):
                     hasHole = True
                     holeCandidates[x] += 1  # just candidates in each column..
 
-<<<<<<< HEAD
-=======
-                    #holeの一段上(y-1)を見てBlockがある場合DeadHoleとして数える(塞がるのは評価マイナス)
-                    if board[(y - 1) * self.board_data_width + x] != self.ShapeNone_index:
-                        #DeadHole
-                        hasDeadHole = True
-                        deadholeCandidates[x] += 1
-
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
                 else:
                     # block
                     hasBlock = True
                     BlockMaxY[x] = height - y                # update blockMaxY
-<<<<<<< HEAD
                     nBlocksEachLine[y] += 1
-=======
-                    nBlocks[y] += 1
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
 
                     if holeCandidates[x] > 0:
                         holeConfirm[x] += holeCandidates[x]  # update number of holes in target column..
@@ -246,7 +215,6 @@ class Block_Controller(object):
                         else:
                             hasReach = False
                     
-<<<<<<< HEAD
                     #Blockの一段下(y+1)を見て空白がある場合FloatingBlockとして数える(浮いているのは評価マイナス)
                     if y != height -1:
                         if board[(y + 1) * self.board_data_width + x] == self.ShapeNone_index:
@@ -261,14 +229,6 @@ class Block_Controller(object):
                     if FloatingBlockCandidates[x] > 0:
                         FloatingBlockConfirm[x] += FloatingBlockCandidates[x]  # update number of holes in target column..
                         FloatingBlockCandidates[x] = 0                # reset
-=======
-                    if holeConfirm[x] > 0:
-                        nIsolatedBlocks += 1                 # update number of isolated blocks
-
-                    if deadholeCandidates[x] > 0:
-                        deadholeConfirm[x] += deadholeCandidates[x]  # update number of holes in target column..
-                        deadholeCandidates[x] = 0                # reset
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
 
             if hasBlock == True and hasHole == False:
                 # filled with block
@@ -291,19 +251,11 @@ class Block_Controller(object):
                 pass
             
             #リーチの本数を追加する
-<<<<<<< HEAD
             if nBlocksEachLine[y] == width - 1 & nFloatingBlocksEachLine[y] == 0:
                 # filled with block
                 reachlines += 1
 
             if nBlocksEachLine[y] == width - 2 & nFloatingBlocksEachLine[y] == 0:
-=======
-            if nBlocks[y] == width - 1 :
-                # filled with block
-                reachlines += 1
-
-            if nBlocks[y] == width - 2 :
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
                 # filled with block
                 w8lines += 1
 
@@ -311,15 +263,9 @@ class Block_Controller(object):
         for x in holeConfirm:
             nHoles += abs(x)
 
-<<<<<<< HEAD
         # nFloatingBlocks
         for x in FloatingBlockConfirm:
             nFloatingBlocks += abs(x)
-=======
-        # nDeadHoles
-        for x in deadholeConfirm:
-            nDeadHoles += abs(x)
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
 
         ### absolute differencial value of MaxY
         BlockMaxDy = []
@@ -350,7 +296,6 @@ class Block_Controller(object):
         # calc Evaluation Value
         score = 0
         score = score + reachlines * 10.0
-<<<<<<< HEAD
         #score = score + w8lines * 5.0
         if hasMaxfullLines == True:
             score = score + fullLines *25.0
@@ -373,30 +318,6 @@ class Block_Controller(object):
 
         #print('score=', score ,'reach=', reachlines,'full=', fullLines, 'holes=', nHoles,'FloatingBlocks=', 
         #       nFloatingBlocks, 'IsolatedBlocks=', nIsolatedBlocks, 'maxHeiaght=',maxHeight, 'absDy=',absDy,'BlockMaxY=', BlockMaxY)
-=======
-        score = score + w8lines * 5.0
-        if hasMaxfullLines == True:
-            score = score + fullLines *100.0
-        elif has3fullLines == True:
-            score = score + fullLines *50.0
-        elif has2fullLines == True:
-            score = score + fullLines *0.0
-        else :
-            score = score +fullLines *0.0
-            
-        #score = score + (fullLines/3) * 500.0 + (fullLines/4) +1000.0          # try to delete line 
-        score = score - nHoles * 10.0                     # try not to make hole
-        score = score - nDeadHoles * 10.0                     # try not to make hole
-        #score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
-        score = score - absDy * 1.0                # try to put block smoothly
-        score = score - maxDy * 1.0                # maxDy
-        score = score - maxHeight * 1.0              # maxHeight
-        #score = score - stdY * 1.0                 # statistical data
-        #score = score - stdDY * 0.01               # statistical data
-
-        #print('score=', score ,'reach=', reachlines,'full=', fullLines, 'holes=', nHoles,'deadholes=', 
-        #       nDeadHoles, 'IsolatedBlocks=', nIsolatedBlocks, 'maxHeiaght=',maxHeight, 'absDy=',absDy,'BlockMaxY=', BlockMaxY)
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
         #os.system('PAUSE')
         return score
 
