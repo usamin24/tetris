@@ -6,6 +6,8 @@ import pprint
 import random
 import copy
 
+import os
+
 class Block_Controller(object):
 
     # init parameter
@@ -63,22 +65,22 @@ class Block_Controller(object):
                 # get board data, as if dropdown block
                 board = self.getBoard(self.board_backboard, self.CurrentShape_class, direction0, x0)
 
-                # evaluate board
-                EvalValue = self.calcEvaluationValueUSAMI(board)
-                # update best move
-                if EvalValue > LatestEvalValue:
-                    strategy = (direction0, x0, 1, 1)
-                    LatestEvalValue = EvalValue
+                ## evaluate board
+                #EvalValue = self.calcEvaluationValueUSAMI(board)
+                ## update best move
+                #if EvalValue > LatestEvalValue:
+                #    strategy = (direction0, x0, 1, 1)
+                #    LatestEvalValue = EvalValue
 
-                ###test
-                ###for direction1 in NextShapeDirectionRange:
-                ###  x1Min, x1Max = self.getSearchXRange(self.NextShape_class, direction1)
-                ###  for x1 in range(x1Min, x1Max):
-                ###        board2 = self.getBoard(board, self.NextShape_class, direction1, x1)
-                ###        EvalValue = self.calcEvaluationValueSample(board2)
-                ###        if EvalValue > LatestEvalValue:
-                ###            strategy = (direction0, x0, 1, 1)
-                ###            LatestEvalValue = EvalValue
+                #1手先を読んで配置する
+                for direction1 in NextShapeDirectionRange:  
+                    x1Min, x1Max = self.getSearchXRange(self.NextShape_class, direction1)
+                    for x1 in range(x1Min, x1Max):
+                            board2 = self.getBoard(board, self.NextShape_class, direction1, x1)
+                            EvalValue = self.calcEvaluationValueUSAMI(board2)
+                            if EvalValue > LatestEvalValue:
+                                strategy = (direction0, x0, 1, 1)
+                                LatestEvalValue = EvalValue
         # search best nextMove <--
 
         print("===", datetime.now() - t1)
@@ -88,6 +90,7 @@ class Block_Controller(object):
         nextMove["strategy"]["y_moveblocknum"] = strategy[3]
         print(nextMove)
         print("###### USAMI CODE ######")
+        
         return nextMove
         
     def getSearchXRange(self, Shape_class, direction):
@@ -155,20 +158,40 @@ class Block_Controller(object):
         # evaluation paramters
         ## lines to be removed
         fullLines = 0
+        ## 複数列消しフラグ
+        hasMaxfullLines = False
+        has3fullLines = False
+        has2fullLines = False
+        ## リーチ状態のline数
+        reachlines = 0
+        ## Blockが横に8つ並んでいる(セミリーチ)line数
+        w8lines = 0
         ## number of holes or blocks in the line.
         nHoles, nIsolatedBlocks = 0, 0
+        #浮いているブロックの数
+        nFloatingBlocks = 0
+
         ## absolute differencial value of MaxY
         absDy = 0
         ## how blocks are accumlated
         BlockMaxY = [0] * width
         holeCandidates = [0] * width
         holeConfirm = [0] * width
-
+        ## 上がふさがっているFloatingBlock の候補と確定
+        FloatingBlockCandidates = [0] * width
+        FloatingBlockConfirm = [0] * width
+        #y列目ごとにあるブロックの数
+        nBlocksEachLine = [0] * height
+        #y列目ごとにある浮いているブロックの数
+        nFloatingBlocksEachLine = [0] * height
         ### check board
         # each y line
         for y in range(height - 1, 0, -1):
             hasHole = False
             hasBlock = False
+            hasReach = False
+            hasFloatingBlock = False
+            
             # each x line
             for x in range(width):
                 ## check if hole or block..
@@ -176,29 +199,73 @@ class Block_Controller(object):
                     # hole
                     hasHole = True
                     holeCandidates[x] += 1  # just candidates in each column..
+
                 else:
                     # block
                     hasBlock = True
                     BlockMaxY[x] = height - y                # update blockMaxY
+                    nBlocksEachLine[y] += 1
+
                     if holeCandidates[x] > 0:
                         holeConfirm[x] += holeCandidates[x]  # update number of holes in target column..
                         holeCandidates[x] = 0                # reset
+                     
+                        if holeConfirm[x] == 1:              #リーチのline(holeが一つだけの線)があるかどうか調べる
+                            hasReach = True
+                        else:
+                            hasReach = False
+                    
+                    #Blockの一段下(y+1)を見て空白がある場合FloatingBlockとして数える(浮いているのは評価マイナス)
+                    if y != height -1:
+                        if board[(y + 1) * self.board_data_width + x] == self.ShapeNone_index:
+                            #FloatingBlock
+                            hasFloatingBlock = True
+                            FloatingBlockCandidates[x] += 1
+                            nFloatingBlocksEachLine[y] += 1
+
                     if holeConfirm[x] > 0:
                         nIsolatedBlocks += 1                 # update number of isolated blocks
+
+                    if FloatingBlockCandidates[x] > 0:
+                        FloatingBlockConfirm[x] += FloatingBlockCandidates[x]  # update number of holes in target column..
+                        FloatingBlockCandidates[x] = 0                # reset
 
             if hasBlock == True and hasHole == False:
                 # filled with block
                 fullLines += 1
+                if fullLines == 4:
+                    hasMaxfullLines = True
+                elif fullLines == 3:
+                    has3fullLines = True
+                elif fullLines == 2:
+                    has2fullLines = True
+                else:
+                    hasMaxfullLines = False
+                    has3fullLines = False
+                    has2fullLines = False
             elif hasBlock == True and hasHole == True:
                 # do nothing
                 pass
             elif hasBlock == False:
                 # no block line (and ofcourse no hole)
                 pass
+            
+            #リーチの本数を追加する
+            if nBlocksEachLine[y] == width - 1 & nFloatingBlocksEachLine[y] == 0:
+                # filled with block
+                reachlines += 1
+
+            if nBlocksEachLine[y] == width - 2 & nFloatingBlocksEachLine[y] == 0:
+                # filled with block
+                w8lines += 1
 
         # nHoles
         for x in holeConfirm:
             nHoles += abs(x)
+
+        # nFloatingBlocks
+        for x in FloatingBlockConfirm:
+            nFloatingBlocks += abs(x)
 
         ### absolute differencial value of MaxY
         BlockMaxDy = []
@@ -228,16 +295,30 @@ class Block_Controller(object):
 
         # calc Evaluation Value
         score = 0
-        score = score + fullLines* fullLines * 10.0           # try to delete line 
-        score = score - nHoles * 5.0               # try not to make hole
-        score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
+        score = score + reachlines * 10.0
+        #score = score + w8lines * 5.0
+        if hasMaxfullLines == True:
+            score = score + fullLines *25.0
+        elif has3fullLines == True:
+            score = score + fullLines *5.0
+        elif has2fullLines == True:
+            score = score + fullLines *(-10.0)
+        else :
+            score = score +fullLines *(-10.0)
+            
+        #score = score + (fullLines/3) * 500.0 + (fullLines/4) +1000.0          # try to delete line 
+        score = score - nHoles * 10.0                     # try not to make hole
+        score = score - nFloatingBlocks * 20.0                     # try not to make hole
+        #score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
         score = score - absDy * 1.0                # try to put block smoothly
-        score = score - maxDy * 0.3                # maxDy
-        score = score - maxHeight * 0.5              # maxHeight
+        score = score - maxDy * 1.0                # maxDy
+        score = score - maxHeight * 0.0              # maxHeight
         #score = score - stdY * 1.0                 # statistical data
         #score = score - stdDY * 0.01               # statistical data
 
-        print(score, fullLines, nHoles, nIsolatedBlocks, maxHeight, absDy, BlockMaxY)
+        #print('score=', score ,'reach=', reachlines,'full=', fullLines, 'holes=', nHoles,'FloatingBlocks=', 
+        #       nFloatingBlocks, 'IsolatedBlocks=', nIsolatedBlocks, 'maxHeiaght=',maxHeight, 'absDy=',absDy,'BlockMaxY=', BlockMaxY)
+        #os.system('PAUSE')
         return score
 
 BLOCK_CONTROLLER = Block_Controller()
