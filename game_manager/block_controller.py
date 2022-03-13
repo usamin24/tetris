@@ -72,11 +72,7 @@ class Block_Controller(object):
                 #    strategy = (direction0, x0, 1, 1)
                 #    LatestEvalValue = EvalValue
 
-<<<<<<< HEAD
                 #1手先を読んで配置する
-=======
-                #test
->>>>>>> ce8418c2b7de64eecf1d6902e0a713fabbb8fcb9
                 for direction1 in NextShapeDirectionRange:  
                     x1Min, x1Max = self.getSearchXRange(self.NextShape_class, direction1)
                     for x1 in range(x1Min, x1Max):
