@@ -322,4 +322,3 @@ class Block_Controller(object):
         return score
 
 BLOCK_CONTROLLER = Block_Controller()
-
