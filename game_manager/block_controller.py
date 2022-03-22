@@ -76,11 +76,11 @@ class Block_Controller(object):
                 for direction1 in NextShapeDirectionRange:  
                     x1Min, x1Max = self.getSearchXRange(self.NextShape_class, direction1)
                     for x1 in range(x1Min, x1Max):
-                            board2 = self.getBoard(board, self.NextShape_class, direction1, x1)
-                            EvalValue = self.calcEvaluationValueUSAMI(board2)
-                            if EvalValue > LatestEvalValue:
-                                strategy = (direction0, x0, 1, 1)
-                                LatestEvalValue = EvalValue
+                        board2 = self.getBoard(board, self.NextShape_class, direction1, x1)
+                        EvalValue = self.calcEvaluationValueUSAMI(board2)
+                        if EvalValue > LatestEvalValue:
+                            strategy = (direction0, x0, 1, 1)
+                            LatestEvalValue = EvalValue
         # search best nextMove <--
 
         print("===", datetime.now() - t1)
@@ -295,26 +295,53 @@ class Block_Controller(object):
 
         # calc Evaluation Value
         score = 0
-        score = score + reachlines * 10.0
-        #score = score + w8lines * 5.0
-        if hasMaxfullLines == True:
-            score = score + fullLines *25.0
-        elif has3fullLines == True:
-            score = score + fullLines *5.0
-        elif has2fullLines == True:
-            score = score + fullLines *(-10.0)
-        else :
-            score = score +fullLines *(-10.0)
+
+        if(maxHeight>height/2.0):
+            score = score + reachlines * 5.0
+            #score = score + w8lines * 5.0
             
-        #score = score + (fullLines/3) * 500.0 + (fullLines/4) +1000.0          # try to delete line 
-        score = score - nHoles * 10.0                     # try not to make hole
-        score = score - nFloatingBlocks * 20.0                     # try not to make hole
-        #score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
-        score = score - absDy * 1.0                # try to put block smoothly
-        score = score - maxDy * 1.0                # maxDy
-        score = score - maxHeight * 0.0              # maxHeight
-        #score = score - stdY * 1.0                 # statistical data
-        #score = score - stdDY * 0.01               # statistical data
+            if hasMaxfullLines == True:
+                score = score + fullLines *60.0
+            elif has3fullLines == True:
+                score = score + fullLines *50.0
+            elif has2fullLines == True:
+                score = score + fullLines *(20.0)
+            else :
+                score = score +fullLines *(5.0)
+
+            #score = score + (fullLines/3) * 500.0 + (fullLines/4) +1000.0          # try to delete line 
+            score = score - nHoles * 5.0                     # try not to make hole
+            score = score - nFloatingBlocks * 30.0                     # try not to make hole
+            #score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
+            score = score - absDy * 1.0                # try to put block smoothly
+            score = score - maxDy * 10.0                # maxDy
+            score = score - maxHeight * 5.0              # maxHeight
+            #score = score - stdY * 1.0                 # statistical data
+            #score = score - stdDY * 0.01               # statistical data
+        else :
+            score = score + reachlines * 10.0
+            #score = score + w8lines * 5.0
+
+            if hasMaxfullLines == True:
+                score = score + fullLines *25.0
+            elif has3fullLines == True:
+                score = score + fullLines *5.0
+            elif has2fullLines == True:
+                score = score + fullLines *(-10.0)
+            else :
+                score = score +fullLines *(-10.0) 
+
+                        #score = score + (fullLines/3) * 500.0 + (fullLines/4) +1000.0          # try to delete line 
+            score = score - nHoles * 10.0                     # try not to make hole
+            score = score - nFloatingBlocks * 20.0                     # try not to make hole
+            #score = score - nIsolatedBlocks * 1.0      # try not to make isolated block
+            score = score - absDy * 1.0                # try to put block smoothly
+            score = score - maxDy * 1.0                # maxDy
+            score = score - maxHeight * 0.0              # maxHeight
+            #score = score - stdY * 1.0                 # statistical data
+            #score = score - stdDY * 0.01               # statistical data
+
+        
 
         #print('score=', score ,'reach=', reachlines,'full=', fullLines, 'holes=', nHoles,'FloatingBlocks=', 
         #       nFloatingBlocks, 'IsolatedBlocks=', nIsolatedBlocks, 'maxHeiaght=',maxHeight, 'absDy=',absDy,'BlockMaxY=', BlockMaxY)
